@@ -1,7 +1,34 @@
 """TensorFlow workspace initialization. Consult the WORKSPACE on how to use it."""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("//third_party:cuda_redist_json_repo.bzl", "cuda_redist_json")
 load("//third_party/llvm:workspace.bzl", llvm = "repo")
+
+_CUDA_REDIST_JSON_DICT = {
+    "11.8": [
+        "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_11.8.0.json",
+        "941a950a4ab3b95311c50df7b3c8bca973e0cdda76fc2f4b456d2d5e4dac0281",
+    ],
+    "12.1.1": [
+        "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.1.1.json",
+        "bafea3cb83a4cf5c764eeedcaac0040d0d3c5db3f9a74550da0e7b6ac24d378c",
+    ],
+    "12.3.2": [
+        "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.3.2.json",
+        "1b6eacf335dd49803633fed53ef261d62c193e5a56eee5019e7d2f634e39e7ef",
+    ],
+}
+
+_CUDNN_REDIST_JSON_DICT = {
+    "8.6": [
+        "https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_8.6.0.json",
+        "7f6f50bed4fd8216dc10d6ef505771dc0ecc99cce813993ab405cb507a21d51d",
+    ],
+    "8.9.7.29": [
+        "https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_8.9.7.29.json",
+        "a0734f26f068522464fa09b2f2c186dfbe6ad7407a88ea0c50dd331f0c3389ec",
+    ],
+}
 
 def workspace():
     http_archive(
@@ -45,6 +72,13 @@ def workspace():
     # Load the raw llvm-project.  llvm does not have build rules set up by default,
     # but provides a script for setting up build rules via overlays.
     llvm("llvm-raw")
+
+    # Load JSON files for CUDA and cuDNN distribution versions.
+    cuda_redist_json(
+        name = "cuda_redist_json",
+        cuda_json_dict = _CUDA_REDIST_JSON_DICT,
+        cudnn_json_dict = _CUDNN_REDIST_JSON_DICT,
+    )
 
 # Alias so it can be loaded without assigning to a different symbol to prevent
 # shadowing previous loads and trigger a buildifier warning.

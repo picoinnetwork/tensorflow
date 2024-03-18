@@ -19,7 +19,7 @@ load(
     "xla_cc_test",
 )
 load("//xla/tests:build_defs.bzl", "xla_test")
-load("//xla/tsl:tsl.bzl", "if_oss")
+load("//xla/tsl:tsl.bzl", "if_hermetic_cuda_tools", "if_oss")
 load("//xla/tsl:tsl.default.bzl", "filegroup")
 
 package(
@@ -821,6 +821,7 @@ lit_test_suite(
         "//xla/tools/hlo_opt:gpu_specs/v100.txtpb",
     ],
     default_tags = tf_cuda_tests_tags() + ["gpu_any"],
+    hermetic_cuda_data_dir = if_hermetic_cuda_tools("%S/../../../../../cuda_nvcc", None),
     tags_override = {
         "element_wise_row_vectorization.hlo": ["no_rocm"],
         "scatter_bf16.hlo": ["no_rocm"],

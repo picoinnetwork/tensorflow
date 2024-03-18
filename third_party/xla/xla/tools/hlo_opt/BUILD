@@ -17,6 +17,7 @@ load(
     "//xla/stream_executor:build_defs.bzl",
     "if_gpu_is_configured",
 )
+load("//xla/tsl:tsl.bzl", "if_hermetic_cuda_tools")
 load("//xla/tsl:tsl.default.bzl", "filegroup")
 
 package(
@@ -177,6 +178,7 @@ lit_test_suite(
     cfg = "//xla:lit.cfg.py",
     data = [":test_utilities"],
     default_tags = tf_cuda_tests_tags() + ["gpu_any"],
+    hermetic_cuda_data_dir = if_hermetic_cuda_tools("%S/../../../../cuda_nvcc", None),
     tags_override = {
         "gpu_hlo_ptx.hlo": ["no_rocm"],
     },

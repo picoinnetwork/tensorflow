@@ -49,6 +49,7 @@ def lit_test_suite(
         timeout = None,
         default_tags = None,
         tags_override = None,
+        hermetic_cuda_data_dir = None,
         **kwargs):
     """Creates one lit test per source file and a test suite that bundles them.
 
@@ -73,6 +74,8 @@ def lit_test_suite(
       timeout: timeout argument passed to the individual tests.
       default_tags: string list. Tags applied to all tests.
       tags_override: string_dict. Tags applied in addition to only select tests.
+      hermetic_cuda_data_dir: string. If set, the tests will be run with a
+        `--xla_gpu_cuda_data_dir` flag set to the hermetic CUDA data directory.
       **kwargs: additional keyword arguments to pass to all generated rules.
 
     See https://llvm.org/docs/CommandGuide/lit.html for details on lit
@@ -104,6 +107,7 @@ def lit_test_suite(
             env = env,
             timeout = timeout,
             tags = default_tags + tags_override.get(test_file, []),
+            hermetic_cuda_data_dir = hermetic_cuda_data_dir,
             **kwargs
         )
 
@@ -111,6 +115,15 @@ def lit_test_suite(
         name = name,
         tests = tests,
         **kwargs
+    )
+
+def _set_xla_gpu_cuda_data_dir(rule_name, input_file, output_file, xla_gpu_cuda_data_dir):
+    return native.genrule(
+        name = rule_name,
+        srcs = [input_file],
+        outs = [output_file],
+        cmd = """echo -e '// RUN: export XLA_FLAGS=\"--xla_gpu_cuda_data_dir={}\"' > $@;
+cat $< >> $@;""".format(xla_gpu_cuda_data_dir),
     )
 
 def lit_test(
@@ -123,6 +136,7 @@ def lit_test(
         visibility = None,
         env = None,
         timeout = None,
+        hermetic_cuda_data_dir = None,
         **kwargs):
     """Runs a single test file with LLVM's lit tool.
 
@@ -145,6 +159,8 @@ def lit_test(
       env: string_dict. Environment variables available during test execution.
         See the common Bazel test attribute.
       timeout: bazel test timeout string, as per common bazel definitions.
+      hermetic_cuda_data_dir: string. If set, the tests will be run with a
+        `--xla_gpu_cuda_data_dir` flag set to the hermetic CUDA data directory.
       **kwargs: additional keyword arguments to pass to all generated rules.
 
     See https://llvm.org/docs/CommandGuide/lit.html for details on lit
@@ -178,6 +194,12 @@ def lit_test(
         visibility = ["//visibility:private"],
         **kwargs
     )
+
+    if hermetic_cuda_data_dir:
+        updated_file = "updated_{}".format(test_file)
+        rule_name = name + "_with_xla_gpu_cuda_data_dir"
+        _set_xla_gpu_cuda_data_dir(rule_name, test_file, updated_file, hermetic_cuda_data_dir)
+        test_file = rule_name
 
     native_test(
         name = name,

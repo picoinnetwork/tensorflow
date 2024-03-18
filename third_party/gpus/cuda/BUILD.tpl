@@ -1,6 +1,7 @@
 load(":build_defs.bzl", "cuda_header_library")
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 
 licenses(["restricted"])  # MPL2, portions GPL v3, LGPL v3, BSD-like
 
@@ -144,7 +145,6 @@ cc_library(
     name = "cusolver",
     srcs = ["cuda/lib/%{cusolver_lib}"],
     data = ["cuda/lib/%{cusolver_lib}"],
-    linkopts = ["-lgomp"],
     linkstatic = 1,
 )
 
@@ -220,7 +220,6 @@ cc_library(
     name = "cusparse",
     srcs = ["cuda/lib/%{cusparse_lib}"],
     data = ["cuda/lib/%{cusparse_lib}"],
-    linkopts = ["-lgomp"],
     linkstatic = 1,
 )
 
@@ -240,6 +239,31 @@ bzl_library(
 py_library(
     name = "cuda_config_py",
     srcs = ["cuda/cuda_config.py"],
+)
+
+# Config setting whether TensorFlow is built with hermetic CUDA.
+alias(
+    name = "hermetic_cuda_tools",
+    actual = "@local_config_cuda//:is_cuda_enabled",
+)
+
+# Flag indicating if we should include hermetic CUDA libs.
+bool_flag(
+    name = "include_hermetic_cuda_libs",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "hermetic_cuda_libs",
+    flag_values = {":include_hermetic_cuda_libs": "True"},
+)
+
+selects.config_setting_group(
+    name = "hermetic_cuda_tools_and_libs",
+    match_all = [
+        ":hermetic_cuda_libs",
+        ":hermetic_cuda_tools"
+    ],
 )
 
 %{copy_rules}

@@ -15,6 +15,7 @@ load("//tensorflow/tools/toolchains/clang6:repo.bzl", "clang6_configure")
 load("//tensorflow/tools/toolchains/embedded/arm-linux:arm_linux_toolchain_configure.bzl", "arm_linux_toolchain_configure")
 load("//tensorflow/tools/toolchains/remote:configure.bzl", "remote_execution_configure")
 load("//tensorflow/tools/toolchains/remote_config:configs.bzl", "initialize_rbe_configs")
+load("//third_party:cuda_repo.bzl", "cuda_distributives")
 load("//third_party:repo.bzl", "tf_http_archive", "tf_mirror_urls")
 load("//third_party/absl:workspace.bzl", absl = "repo")
 load("//third_party/benchmark:workspace.bzl", benchmark = "repo")
@@ -29,7 +30,10 @@ load("//third_party/flatbuffers:workspace.bzl", flatbuffers = "repo")
 load("//third_party/FP16:workspace.bzl", FP16 = "repo")
 load("//third_party/gemmlowp:workspace.bzl", gemmlowp = "repo")
 load("//third_party/git:git_configure.bzl", "git_configure")
-load("//third_party/gpus:cuda_configure.bzl", "cuda_configure")
+
+# If you need to use non-hermetic CUDA, replace the line below with
+# load("//third_party/gpus:cuda_configure.bzl", "cuda_configure")
+load("//third_party/gpus:hermetic_cuda_configure.bzl", "hermetic_cuda_configure")
 load("//third_party/gpus:rocm_configure.bzl", "rocm_configure")
 load("//third_party/hexagon:workspace.bzl", hexagon_nn = "repo")
 load("//third_party/highwayhash:workspace.bzl", highwayhash = "repo")
@@ -41,7 +45,10 @@ load("//third_party/kissfft:workspace.bzl", kissfft = "repo")
 load("//third_party/libprotobuf_mutator:workspace.bzl", libprotobuf_mutator = "repo")
 load("//third_party/llvm:setup.bzl", "llvm_setup")
 load("//third_party/nasm:workspace.bzl", nasm = "repo")
-load("//third_party/nccl:nccl_configure.bzl", "nccl_configure")
+
+# If you need to use non-hermetic CUDA, replace the line below with
+# load("//third_party/nccl:nccl_configure.bzl", "nccl_configure")
+load("//third_party/nccl:hermetic_nccl_configure.bzl", "hermetic_nccl_configure")
 load("//third_party/opencl_headers:workspace.bzl", opencl_headers = "repo")
 load("//third_party/pasta:workspace.bzl", pasta = "repo")
 load("//third_party/py:python_configure.bzl", "python_configure")
@@ -103,9 +110,15 @@ def _tf_toolchains():
     # Note that we check the minimum bazel version in WORKSPACE.
     clang6_configure(name = "local_config_clang6")
     cc_download_clang_toolchain(name = "local_config_download_clang")
-    cuda_configure(name = "local_config_cuda")
+
+    # If you need to use non-hermetic CUDA, replace the line below with
+    # cuda_configure(name = "local_config_cuda")
+    hermetic_cuda_configure(name = "local_config_cuda")
     tensorrt_configure(name = "local_config_tensorrt")
-    nccl_configure(name = "local_config_nccl")
+
+    # If you need to use non-hermetic CUDA, replace the line below with
+    # nccl_configure(name = "local_config_nccl")
+    hermetic_nccl_configure(name = "local_config_nccl")
     git_configure(name = "local_config_git")
     syslibs_configure(name = "local_config_syslibs")
     python_configure(name = "local_config_python")
@@ -919,6 +932,35 @@ def _tf_repositories():
         version_conflict_policy = "pinned",
     )
 
+_CUDA_12_3_NCCL_WHEEL_DICT = {
+    "x86_64-unknown-linux-gnu": {
+        "url": "https://files.pythonhosted.org/packages/38/00/d0d4e48aef772ad5aebcf70b73028f88db6e5640b36c38e90445b7a57c45/nvidia_nccl_cu12-2.19.3-py3-none-manylinux1_x86_64.whl",
+        "sha256": "a9734707a2c96443331c1e48c717024aa6678a0e2a4cb66b2c364d18cee6b48d",
+    },
+    "aarch64-unknown-linux-gnu": {
+        "url": "https://files.pythonhosted.org/packages/c1/bb/d09dda47c881f9ff504afd6f9ca4f502ded6d8fc2f572cacc5e39da91c28/nvidia_nccl_cu12-2.20.5-py3-none-manylinux2014_aarch64.whl",
+        "sha256": "1fc150d5c3250b170b29410ba682384b14581db722b2531b0d8d33c595f33d01",
+    },
+}
+
+_CUDA_12_1_NCCL_WHEEL_DICT = {
+    "x86_64-unknown-linux-gnu": {
+        "url": "https://files.pythonhosted.org/packages/38/00/d0d4e48aef772ad5aebcf70b73028f88db6e5640b36c38e90445b7a57c45/nvidia_nccl_cu12-2.19.3-py3-none-manylinux1_x86_64.whl",
+        "sha256": "a9734707a2c96443331c1e48c717024aa6678a0e2a4cb66b2c364d18cee6b48d",
+    },
+    "aarch64-unknown-linux-gnu": {
+        "url": "https://files.pythonhosted.org/packages/c1/bb/d09dda47c881f9ff504afd6f9ca4f502ded6d8fc2f572cacc5e39da91c28/nvidia_nccl_cu12-2.20.5-py3-none-manylinux2014_aarch64.whl",
+        "sha256": "1fc150d5c3250b170b29410ba682384b14581db722b2531b0d8d33c595f33d01",
+    },
+}
+
+_CUDA_11_8_NCCL_WHEEL_DICT = {
+    "x86_64-unknown-linux-gnu": {
+        "url": "https://files.pythonhosted.org/packages/0e/7d/cc3dbf36c5af39b042d508b7a441ada1fce69bd18c800e5c25dc4e9f8933/nvidia_nccl_cu11-2.19.3-py3-none-manylinux1_x86_64.whl",
+        "sha256": "7c58afbeddf7f7c6b7dd7d84a7f4e85462610ee0c656287388b96d89dcf046d5",
+    },
+}
+
 def workspace():
     # Check the bazel version before executing any repository rules, in case
     # those rules rely on the version we require here.
@@ -936,6 +978,11 @@ def workspace():
     # don't already exist (at least if the external repository macros were
     # written according to common practice to query native.existing_rule()).
     _tf_repositories()
+    cuda_distributives(cuda_nccl_wheel_dict = {
+        "12.3.2": _CUDA_12_3_NCCL_WHEEL_DICT,
+        "12.1.1": _CUDA_12_1_NCCL_WHEEL_DICT,
+        "11.8": _CUDA_11_8_NCCL_WHEEL_DICT,
+    })
 
     tfrt_dependencies()
 
