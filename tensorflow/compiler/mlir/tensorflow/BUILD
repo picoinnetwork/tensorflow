@@ -1668,7 +1668,7 @@ aliased_targets = [
     "mlir_roundtrip_pass",
     "mlir_roundtrip_pass_registration",
     "mlir_roundtrip_flags",
-    "mlir_import_options",
+    "saved_model_import_options",
     "translate_lib",
     "translate_cl_options",
     "translate_registration",
