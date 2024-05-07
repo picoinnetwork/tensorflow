@@ -881,12 +881,14 @@ absl::StatusOr<Value> EmitScope(
     absl::flat_hash_map<const HloInstruction*, Value>& values) {
   for (const HloInstruction* hlo : instructions) {
     Value result;
-    if (hlo->opcode() == HloOpcode::kConcatenate) {
+    if (hlo->opcode() == HloOpcode::kConcatenate ||
+        hlo->opcode() == HloOpcode::kDynamicSlice) {
       // Parameter loads and their concatenations are handled outside EmitScope.
       TF_RET_CHECK(values.contains(hlo)) << hlo->ToString();
       continue;
     } else if (hlo->opcode() == HloOpcode::kParameter) {
-      if (hlo->users()[0]->opcode() == HloOpcode::kConcatenate) {
+      if (hlo->users()[0]->opcode() == HloOpcode::kConcatenate ||
+          hlo->users()[0]->opcode() == HloOpcode::kDynamicSlice) {
         continue;
       }
       TF_RET_CHECK(values.contains(hlo)) << hlo->ToString();
@@ -1486,7 +1488,49 @@ class MatMulEmitterHelper {
             select_value,
             EmitMultiSelect(b_, pid_offset, concat_boundaries, input_bounds));
         bounds.push_back(select_value);
+        tensor_offsets.push_back(Cst32(specs.front()->at(0).slice_start));
+      } else if (hlo->opcode() == HloOpcode::kDynamicSlice &&
+                 properties.index == dims_.out_lhs_noncontracting_dim_idx) {
+        // Here we compute the offset of where we should read the slice from.
+        // TODO(b/323255699): Add support for slices of the contracting dim.
+        // Dynamic slices are guaranteed to only be offset along the majormost
+        // dimension.
+        int majormost_idx = hlo->shape().layout().minor_to_major().back();
+
+        // dynamic slice operands are (input, offset_0, offset_1, ...) so
+        // bases[i] corresponds to the ith operand, bases[i+1] corresponds to
+        // the offest for the ith dim.
+        Value majormost_offset = b_.create<mt::LoadOp>(
+            bases[majormost_idx + 1], mt::CacheModifier::NONE,
+            mt::EvictionPolicy::NORMAL,
+            /*isVolatile=*/false);
+
+        // As we offset on the majormost dim, our slice offset is the product of
+        // all the (non-sliced) non-majormost dimensions, except the contracting
+        // dim, which is captured by the stride.
+        int64_t majormost_idx_stride = 1;
+        for (int i = 0; i < hlo->shape().dimensions().size() - 1; ++i) {
+          majormost_idx_stride *= hlo->shape().dimensions_minor(i);
+        }
+        majormost_idx_stride =
+            majormost_idx_stride / specs.back()->at(0).stride;
+
+        Value offset_value = Cst32(majormost_idx_stride);
+        Value tensor_dim_offset =
+            b_.create<ma::MulIOp>(majormost_offset, offset_value);
+        tensor_offsets.push_back(tensor_dim_offset);
+
+        // tt.make_tensor_ptr expects an i64 for shape and size, but expects
+        // i32 for offsets. We extend the offset to calculate the upper bound.
+        Value ext_tensor_dim_offset =
+            b_.create<ma::ExtSIOp>(i64_ty_, tensor_dim_offset);
+        Value sliced_count_value = Cst64(specs.back()->at(0).sliced_count);
+        Value upper_bound =
+            b_.create<ma::AddIOp>(sliced_count_value, ext_tensor_dim_offset);
+        bounds.push_back(upper_bound);
+        block_offsets.push_back(pid_offset);
       } else {
+        tensor_offsets.push_back(Cst32(specs.front()->at(0).slice_start));
         block_offsets.push_back(pid_offset);
         int64_t count = specs.front()->at(0).count;
         if (side.scope == TritonFusionAnalysis::Scope::OUTPUT &&
@@ -1502,7 +1546,6 @@ class MatMulEmitterHelper {
           boundary_checks.push_back(bounds.size() - 1);
         }
       }
-      tensor_offsets.push_back(Cst32(specs.front()->at(0).slice_start));
       block_dims.push_back(properties.block_size);
       dim_order.emplace(dim_order.begin(), dim_order.size());
       return absl::OkStatus();
@@ -1650,9 +1693,13 @@ SmallVector<Value> GetArguments(mlir::triton::FuncOp fn,
                                 const HloInstruction& input) {
   if (input.opcode() == HloOpcode::kParameter) {
     return {fn.getArgument(input.parameter_number())};
-  } else if (input.opcode() == HloOpcode::kConcatenate) {
+  } else if (input.opcode() == HloOpcode::kConcatenate ||
+             input.opcode() == HloOpcode::kDynamicSlice) {
+    // As defined in GemmFusion, all inputs of concatenate and dynamic slice are
+    // parameters.
     SmallVector<Value> result;
     for (const HloInstruction* operand : input.operands()) {
+      CHECK_EQ(operand->opcode(), HloOpcode::kParameter);
       result.push_back(fn.getArgument(operand->parameter_number()));
     }
     return result;
@@ -1669,7 +1716,8 @@ ConstHloInstructionSet ScopeInputs(const TritonFusionAnalysis& analysis,
   ConstHloInstructionSet result;
   for (const HloInstruction* parameter : analysis.ScopeParameters(scope)) {
     if (absl::c_any_of(parameter->users(), [](const HloInstruction* user) {
-          return user->opcode() == HloOpcode::kConcatenate;
+          return user->opcode() == HloOpcode::kConcatenate ||
+                 user->opcode() == HloOpcode::kDynamicSlice;
         })) {
       // Concatenation is always the only user of its parameters by
       // construction.
