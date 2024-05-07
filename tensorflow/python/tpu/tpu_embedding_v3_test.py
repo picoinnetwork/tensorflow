@@ -684,6 +684,8 @@ class TPUEmbeddingV3Test(parameterized.TestCase, test.TestCase):
             optimizer=tpu_embedding_v2_utils.SGD(learning_rate=1.0),
         )
     )
+    # Check that the main table config instance of this test is not updated.
+    self.assertEqual(feature_config.table.dim, 127)
 
     sparse_core_embedding_config = tpu_embedding_v3.SparseCoreEmbeddingConfig(
         disable_table_stacking=False,
@@ -708,7 +710,8 @@ class TPUEmbeddingV3Test(parameterized.TestCase, test.TestCase):
       return strategy.run(step, args=(data,))
 
     result = test_fn()
-
+    # Check that main table config instance of this test is still not updated.
+    self.assertEqual(feature_config.table.dim, 127)
     mid_level_api_cpu = tpu_embedding_for_serving.TPUEmbeddingForServing(
         feature_config=feature_config,
         optimizer=tpu_embedding_v2_utils.SGD(learning_rate=1.0),
