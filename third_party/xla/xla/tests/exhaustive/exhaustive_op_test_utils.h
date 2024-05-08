@@ -22,6 +22,7 @@ limitations under the License.
 #include <cstdint>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -954,52 +955,62 @@ inline ErrorSpec DefaultSpecGenerator(
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<C128, 1>(complex128) {
-  return ErrorSpec{0.0001, 0.0001};
+  float tol = 10 * std::numeric_limits<double>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<C64, 1>(complex64) {
-  return ErrorSpec{0.0001, 0.0001};
+  float tol = 10 * std::numeric_limits<float>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<F64, 1>(double) {
-  return ErrorSpec{0.0001, 0.0001};
+  float tol = 10 * std::numeric_limits<double>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<F32, 1>(float) {
-  return ErrorSpec{0.0001, 0.0001};
+  float tol = 10 * std::numeric_limits<float>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<F16, 1>(Eigen::half) {
-  return ErrorSpec{0.001, 0.001};
+  float tol = 10 * std::numeric_limits<Eigen::half>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<BF16, 1>(bfloat16) {
-  return ErrorSpec{0.002, 0.02};
+  float tol = 10 * std::numeric_limits<bfloat16>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<F64, 2>(double, double) {
-  return ErrorSpec{0.001, 0.001};
+  float tol = 10 * std::numeric_limits<double>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<F32, 2>(float, float) {
-  return ErrorSpec{0.001, 0.001};
+  float tol = 10 * std::numeric_limits<float>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<F16, 2>(Eigen::half, Eigen::half) {
-  return ErrorSpec{0.001, 0.001};
+  float tol = 10 * std::numeric_limits<Eigen::half>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <>
 inline ErrorSpec DefaultSpecGenerator<BF16, 2>(bfloat16, bfloat16) {
-  return ErrorSpec{0.002, 0.02};
+  float tol = 10 * std::numeric_limits<bfloat16>::epsilon();
+  return ErrorSpec{tol, tol};
 }
 
 template <PrimitiveType T, size_t N>
