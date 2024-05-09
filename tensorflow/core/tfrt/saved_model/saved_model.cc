@@ -50,6 +50,7 @@ limitations under the License.
 #include "tensorflow/compiler/mlir/tfrt/translate/import_model.h"
 #include "tensorflow/compiler/mlir/tfrt/translate/tfrt_compile_options.h"
 #include "xla/status_macros.h"
+#include "tensorflow/core/common_runtime/device_mgr.h"
 #include "tensorflow/core/framework/function.pb.h"
 #include "tensorflow/core/framework/metrics.h"
 #include "tensorflow/core/framework/tensor.h"
@@ -568,6 +569,10 @@ absl::StatusOr<std::unique_ptr<SavedModel>> SavedModelImpl::LoadSavedModel(
   // Creates a ResourceContext and populate it with per model resource from
   // Runtime.
   auto resource_context = std::make_unique<tfrt::ResourceContext>();
+  auto* device_mgr = &fallback_state->device_manager();
+  resource_context->CreateResource<tensorflow::DeviceMgr*>(
+      "ModelDeviceMgr", std::move(device_mgr));
+
   ModelRuntimeContext model_context(&options.graph_execution_options,
                                     std::string(saved_model_dir),
                                     resource_context.get());
