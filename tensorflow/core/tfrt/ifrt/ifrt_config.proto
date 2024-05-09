@@ -10,3 +10,8 @@ message VariableDeviceShardingConfigProto {
   xla.OpSharding sharding = 1;
   repeated int32 device_ids = 2;
 }
+
+enum IfrtServingCoreSelectionPolicy {
+  IFRT_SERVING_CORE_SELECTION_POLICY_DEFAULT = 0;
+  IFRT_SERVING_CORE_SELECTION_POLICY_LOCAL_ROUND_ROBIN = 1;
+}
