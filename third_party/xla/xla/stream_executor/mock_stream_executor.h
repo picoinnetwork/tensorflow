@@ -142,7 +142,6 @@ class MockStreamExecutor : public StreamExecutorInterface {
   MOCK_METHOD(absl::Status, WaitForEventOnExternalStream,
               (std::intptr_t stream, Event* event), (override));
   MOCK_METHOD(Event::Status, PollForEventStatus, (Event * event), (override));
-  MOCK_METHOD(bool, AllocateStream, (Stream * stream), (override));
   MOCK_METHOD(void, DeallocateStream, (Stream * stream), (override));
   MOCK_METHOD(bool, CreateStreamDependency, (Stream * dependent, Stream* other),
               (override));
@@ -163,8 +162,6 @@ class MockStreamExecutor : public StreamExecutorInterface {
   MOCK_METHOD(fft::FftSupport*, AsFft, (), (override));
   MOCK_METHOD(dnn::DnnSupport*, AsDnn, (), (override));
   MOCK_METHOD(std::unique_ptr<EventInterface>, CreateEventImplementation, (),
-              (override));
-  MOCK_METHOD(std::unique_ptr<StreamInterface>, GetStreamImplementation, (),
               (override));
   MOCK_METHOD(absl::StatusOr<std::unique_ptr<Kernel>>, CreateKernel, (),
               (override));

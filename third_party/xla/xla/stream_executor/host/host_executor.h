@@ -112,7 +112,6 @@ class HostExecutor : public StreamExecutor {
   absl::Status WaitForEvent(Stream* stream, Event* event) override;
   Event::Status PollForEventStatus(Event* event) override;
 
-  bool AllocateStream(Stream* stream) override;
   void DeallocateStream(Stream* stream) override;
   bool CreateStreamDependency(Stream* dependent, Stream* other) override;
 
@@ -139,7 +138,9 @@ class HostExecutor : public StreamExecutor {
 
   std::unique_ptr<EventInterface> CreateEventImplementation() override;
 
-  std::unique_ptr<StreamInterface> GetStreamImplementation() override;
+  absl::StatusOr<std::unique_ptr<Stream>> CreateStream(
+      std::optional<std::variant<StreamPriority, int>> priority =
+          std::nullopt) override;
 
  private:
   int device_ordinal_;

@@ -162,8 +162,6 @@ bool HostExecutor::HostCallback(
   return true;
 }
 
-bool HostExecutor::AllocateStream(Stream* stream) { return true; }
-
 void HostExecutor::DeallocateStream(Stream* stream) {}
 
 bool HostExecutor::CreateStreamDependency(Stream* dependent, Stream* other) {
@@ -252,8 +250,10 @@ HostExecutor::CreateDeviceDescription(int device_ordinal) {
   return builder.Build();
 }
 
-std::unique_ptr<StreamInterface> HostExecutor::GetStreamImplementation() {
-  return std::make_unique<HostStream>();
+absl::StatusOr<std::unique_ptr<Stream>> HostExecutor::CreateStream(
+    std::optional<std::variant<StreamPriority, int>> priority) {
+  auto stream = std::make_unique<Stream>(this, std::make_unique<HostStream>());
+  return std::move(stream);
 }
 
 }  // namespace host
