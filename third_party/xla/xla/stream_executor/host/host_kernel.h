@@ -26,12 +26,14 @@ limitations under the License.
 #include "xla/stream_executor/host/host_kernel_c_api.h"
 #include "xla/stream_executor/kernel.h"
 #include "xla/stream_executor/launch_dim.h"
+#include "tsl/platform/threadpool.h"
 
 namespace stream_executor::host {
 
 class HostKernel : public Kernel {
  public:
-  HostKernel(unsigned arity, SE_HOST_Kernel* kernel);
+  HostKernel(unsigned arity, SE_HOST_Kernel* kernel,
+             tsl::thread::ThreadPool* thread_pool);
 
   // TODO(b/331430625): Connect this API to Launch API defined at StreamExecutor
   // level, which requires refactoring how arguments passed to kernels, as
@@ -51,6 +53,7 @@ class HostKernel : public Kernel {
  private:
   unsigned arity_;
   SE_HOST_Kernel* kernel_ = nullptr;
+  tsl::thread::ThreadPool* thread_pool_ = nullptr;
 };
 
 }  // namespace stream_executor::host

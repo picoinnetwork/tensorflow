@@ -89,10 +89,12 @@ cc_library(
         ":host_kernel_c_api",
         "//xla/stream_executor",
         "//xla/stream_executor:device_memory",
-        "//xla/stream_executor:stream_executor_interface",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/types:span",
+        "@local_tsl//tsl/platform:blocking_counter",
+        "@local_tsl//tsl/platform:env",
     ],
 )
 
@@ -102,9 +104,14 @@ xla_cc_test(
     deps = [
         ":host_kernel",
         ":host_kernel_c_api",
+        ":host_platform",
+        "//xla/service:hlo_runner",
+        "//xla/service/cpu:cpu_compiler",
+        "//xla/service/cpu:cpu_transfer_manager",
         "//xla/stream_executor",
         "//xla/stream_executor:device_memory",
         "@local_tsl//tsl/lib/core:status_test_util",
+        "@local_tsl//tsl/platform:statusor",
         "@local_tsl//tsl/platform:test",
         "@local_tsl//tsl/platform:test_main",
     ],
