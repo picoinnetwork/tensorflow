@@ -1791,16 +1791,17 @@ ConvGeneric::ConvParams ConvGeneric::GuessBestParams(
         const int kSubGroupSize = 16;
         const bool supports_subgroup_size_control =
             gpu_info.SupportsExtension("cl_intel_required_subgroup_size");
+        auto min_subgroup_size = gpu_info.GetMinSubGroupSize();
         if (supports_subgroup_size_control &&
             gpu_info.SupportsSubGroupWithSize(kSubGroupSize)) {
           conv_params.weights_upload_type =
               WeightsUploadType::PRIVATE_MEM_SIMD_BROADCAST;
           conv_params.simd_size = kSubGroupSize;
-        } else if (gpu_info.opencl_info.IsCLVK()) {
-          // It will work because of specific driver using subgroup size 16
+        } else if (supports_subgroup_size_control && min_subgroup_size.ok()) {
           conv_params.weights_upload_type =
               WeightsUploadType::PRIVATE_MEM_SIMD_BROADCAST;
-          conv_params.simd_size = 16;
+          conv_params.simd_size = min_subgroup_size.value();
+          work_group_size_ = int3(min_subgroup_size.value(), 1, 1);
         } else {
           // no support of subgroup size control
           // only smallest subgroup size (8) can be used safely, otherwise
