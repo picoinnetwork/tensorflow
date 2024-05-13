@@ -24,6 +24,7 @@ limitations under the License.
 #include "xla/pjrt/distributed/protocol.pb.h"
 #include "tsl/lib/core/status_test_util.h"
 #include "tsl/platform/env.h"
+#include "tsl/platform/statusor.h"
 #include "tsl/platform/test.h"
 #include "tsl/platform/threadpool.h"
 
@@ -80,6 +81,27 @@ TEST(TopologyTest, ExchangeTopology) {
     EXPECT_EQ(global.nodes()[0].devices_size(), 2);
     EXPECT_EQ(global.nodes()[1].devices_size(), 2);
   }
+}
+
+TEST(TopologyTest, BuildGpuTopology) {
+  std::vector<LocalTopologyProto> locals(2);
+  DeviceProto* d0 = locals[0].add_devices();
+  d0->set_local_device_ordinal(0);
+  DeviceProto* d1 = locals[0].add_devices();
+  d1->set_local_device_ordinal(1);
+  DeviceProto* d2 = locals[1].add_devices();
+  d2->set_local_device_ordinal(0);
+  DeviceProto* d3 = locals[1].add_devices();
+  d3->set_local_device_ordinal(1);
+
+  GlobalTopologyProto global =
+      BuildGlobalTopology(absl::Span<LocalTopologyProto>(locals));
+
+  TF_ASSERT_OK_AND_ASSIGN(auto gpu_topology, BuildGpuTopology(global));
+  EXPECT_EQ(gpu_topology.device_ids_size(), 4);
+  EXPECT_EQ(gpu_topology.num_slices(), 2);
+  EXPECT_EQ(gpu_topology.num_hosts_per_slice(), 1);
+  EXPECT_EQ(gpu_topology.num_devices_per_host(), 2);
 }
 
 }  // namespace
