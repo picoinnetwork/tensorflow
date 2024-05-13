@@ -16,8 +16,11 @@ limitations under the License.
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/status/status.h"
+#include "xla/tsl/concurrency/async_value_ref.h"
 #include "tensorflow/core/platform/status.h"
 #include "tfrt/support/error_util.h"  // from @tf_runtime
+#include "tfrt/support/forward_decls.h"  // from @tf_runtime
 
 namespace tfrt {
 namespace {
@@ -36,6 +39,14 @@ TEST(ErrorUtilTest, UnsupportedErrorConversion) {
   tensorflow::Status status(absl::StatusCode::kUnauthenticated, "error_test");
   EXPECT_EQ(ConvertTfErrorCodeToTfrtErrorCode(status),
             tfrt::ErrorCode::kUnknown);
+}
+
+TEST(ErrorUtilTest, ToTfStatusError) {
+  auto error_av =
+      tsl::MakeErrorAsyncValueRef(absl::UnauthenticatedError("test_error"));
+  auto status = ToTfStatus(error_av.get());
+  EXPECT_EQ(status.code(), absl::StatusCode::kUnauthenticated);
+  EXPECT_EQ(status.message(), "test_error");
 }
 
 }  // namespace
