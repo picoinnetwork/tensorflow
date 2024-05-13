@@ -1,0 +1,48 @@
+diff --git a/include/triton/Conversion/MLIRTypes.h b/include/triton/Conversion/MLIRTypes.h
+--- a/include/triton/Conversion/MLIRTypes.h
++++ b/include/triton/Conversion/MLIRTypes.h
+@@ -27,13 +27,16 @@ inline Type f64Ty(MLIRContext *ctx) { re
+ inline Type bf16Ty(MLIRContext *ctx) { return FloatType::getBF16(ctx); }
+ 
+ inline bool isFloat(Type type) {
+-  return type.isF32() || type.isF64() || type.isF16() || type.isF128();
++  return type.isF32() || type.isF64() || type.isF16() || type.isF128() ||
++         type.isFloat8E5M2() || type.isFloat8E4M3FN() ||
++         type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ() ||
++         type.isFloat8E4M3B11FNUZ() || type.isBF16();
+ }
+ 
+ inline bool isInt(Type type) { return type.isIntOrFloat() && !isFloat(type); }
+ 
+-} // namespace type
+-} // namespace triton
+-} // namespace mlir
++}  // namespace type
++}  // namespace triton
++}  // namespace mlir
+ 
+-#endif // TRITON_CONVERSION_MLIR_TYPES_H
++#endif  // TRITON_CONVERSION_MLIR_TYPES_H
+diff --git a/lib/Conversion/TritonGPUToLLVM/ViewOpToLLVM.cpp b/lib/Conversion/TritonGPUToLLVM/ViewOpToLLVM.cpp
+--- a/lib/Conversion/TritonGPUToLLVM/ViewOpToLLVM.cpp
++++ b/lib/Conversion/TritonGPUToLLVM/ViewOpToLLVM.cpp
+@@ -73,7 +73,7 @@ struct ArithConstantSplatOpConversion
+     auto values = op.getValue().dyn_cast<SplatElementsAttr>();
+     auto elemType = values.getElementType();
+     Attribute val;
+-    if (elemType.isBF16() || type::isFloat(elemType)) {
++    if (type::isFloat(elemType)) {
+       val = values.getValues<FloatAttr>()[0];
+     } else if (type::isInt(elemType)) {
+       val = values.getValues<IntegerAttr>()[0];
+@@ -82,8 +82,9 @@ struct ArithConstantSplatOpConversion
+                    << value.getType() << "\n";
+       return failure();
+     }
+-    auto constOp = rewriter.create<LLVM::ConstantOp>(loc, elemType, val);
+     auto typeConverter = getTypeConverter();
++    auto constOp = rewriter.create<LLVM::ConstantOp>(
++        loc, typeConverter->convertType(elemType), val);
+     auto llStruct = SplatOpConversion::convertSplatLikeOp(
+         elemType, op.getType(), constOp, typeConverter, rewriter, loc);
+     rewriter.replaceOp(op, llStruct);
